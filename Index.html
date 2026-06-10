@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow Meter Diagnostic Utility</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        h1, h2, h3 { color: #1a252f; margin-top: 0; }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .pair-section {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 16px;
+            background-color: #fff;
+        }
+        .pair-title {
+            font-weight: bold;
+            color: #2c3e50;
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 6px;
+            margin-bottom: 12px;
+        }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #4a5568;
+            margin-bottom: 4px;
+        }
+        .input-row {
+            display: flex;
+            gap: 8px;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 6px 10px;
+            border: 1px solid #cbd5e0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .btn {
+            background-color: #3182ce;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .btn:hover { background-color: #2b6cb0; }
+        
+        /* Report Styling */
+        .hidden { display: none; }
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #2d3748;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .status-pass { background-color: #c6f6d5; color: #22543d; }
+        .status-fail { background-color: #fed7d7; color: #742a2a; }
+        .status-warn { background-color: #feebc8; color: #744210; }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            margin-bottom: 25px;
+        }
+        th, td {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th { background-color: #edf2f7; color: #2d3748; font-size: 0.9rem; }
+        .text-danger { color: #e53e3e; font-weight: bold; }
+        .text-mono { font-family: monospace; }
+        pre { background: #edf2f7; padding: 12px; border-radius: 6px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+
+    <h1>Flow Meter Diagnostic Tool</h1>
+    <p>Enter the logged values for each flow meter across three target test rates. Pairings must be connected in series.</p>
+
+    <div class="card">
+        <div class="form-group" style="max-width: 200px; margin-bottom: 20px;">
+            <label for="tolerance">Allowable Tolerance (%)</label>
+            <input type="number" id="tolerance" value="1.5" step="0.1" min="0">
+        </div>
+
+        <form id="diagnosticForm">
+            <div class="grid">
+                <div class="pair-section">
+                    <div class="pair-title">Test Pairing: C1 &rarr; D1</div>
+                    <div class="form-group">
+                        <label>Rate 1 (Low) [C1 / D1]</label>
+                        <div class="input-row">
+                            <input type="number" id="c1_d1_r1_c" placeholder="C1" step="0.01" required>
+                            <input type="number" id="c1_d1_r1_d" placeholder="D1" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 2 (Mid) [C1 / D1]</label>
+                        <div class="input-row">
+                            <input type="number" id="c1_d1_r2_c" placeholder="C1" step="0.01" required>
+                            <input type="number" id="c1_d1_r2_d" placeholder="D1" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 3 (High) [C1 / D1]</label>
+                        <div class="input-row">
+                            <input type="number" id="c1_d1_r3_c" placeholder="C1" step="0.01" required>
+                            <input type="number" id="c1_d1_r3_d" placeholder="D1" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pair-section">
+                    <div class="pair-title">Test Pairing: C1 &rarr; D2</div>
+                    <div class="form-group">
+                        <label>Rate 1 (Low) [C1 / D2]</label>
+                        <div class="input-row">
+                            <input type="number" id="c1_d2_r1_c" placeholder="C1" step="0.01" required>
+                            <input type="number" id="c1_d2_r1_d" placeholder="D2" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 2 (Mid) [C1 / D2]</label>
+                        <div class="input-row">
+                            <input type="number" id="c1_d2_r2_c" placeholder="C1" step="0.01" required>
+                            <input type="number" id="c1_d2_r2_d" placeholder="D2" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 3 (High) [C1 / D2]</label>
+                        <div class="input-row">
+                            <input type="number" id="c1_d2_r3_c" placeholder="C1" step="0.01" required>
+                            <input type="number" id="c1_d2_r3_d" placeholder="D2" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pair-section">
+                    <div class="pair-title">Test Pairing: C2 &rarr; D1</div>
+                    <div class="form-group">
+                        <label>Rate 1 (Low) [C2 / D1]</label>
+                        <div class="input-row">
+                            <input type="number" id="c2_d1_r1_c" placeholder="C2" step="0.01" required>
+                            <input type="number" id="c2_d1_r1_d" placeholder="D1" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 2 (Mid) [C2 / D1]</label>
+                        <div class="input-row">
+                            <input type="number" id="c2_d1_r2_c" placeholder="C2" step="0.01" required>
+                            <input type="number" id="c2_d1_r2_d" placeholder="D1" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 3 (High) [C2 / D1]</label>
+                        <div class="input-row">
+                            <input type="number" id="c2_d1_r3_c" placeholder="C2" step="0.01" required>
+                            <input type="number" id="c2_d1_r3_d" placeholder="D1" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="pair-section">
+                    <div class="pair-title">Test Pairing: C2 &rarr; D2</div>
+                    <div class="form-group">
+                        <label>Rate 1 (Low) [C2 / D2]</label>
+                        <div class="input-row">
+                            <input type="number" id="c2_d2_r1_c" placeholder="C2" step="0.01" required>
+                            <input type="number" id="c2_d2_r1_d" placeholder="D2" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 2 (Mid) [C2 / D2]</label>
+                        <div class="input-row">
+                            <input type="number" id="c2_d2_r2_c" placeholder="C2" step="0.01" required>
+                            <input type="number" id="c2_d2_r2_d" placeholder="D2" step="0.01" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Rate 3 (High) [C2 / D2]</label>
+                        <div class="input-row">
+                            <input type="number" id="c2_d2_r3_c" placeholder="C2" step="0.01" required>
+                            <input type="number" id="c2_d2_r3_d" placeholder="D2" step="0.01" required>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn">Analyze Flow Data</button>
+            <button type="button" class="btn" style="background-color: #718096;" onclick="loadMockData()">Load Sample Fault Data</button>
+        </form>
+    </div>
+
+    <div id="reportContainer" class="card hidden">
+        <div class="report-header">
+            <div>
+                <h2>Diagnostic Evaluation Report</h2>
+                <small id="reportTimestamp"></small>
+            </div>
+            <div id="overallStatusBadge"></div>
+        </div>
+
+        <h3>System Status Executive Summary</h3>
+        <p id="executiveSummary" style="font-size: 1.1rem; font-weight: 500;"></p>
+
+        <h3>Pairing Comparison Matrix</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Pair Configuration</th>
+                    <th>Avg. Meter C Value</th>
+                    <th>Avg. Meter D Value</th>
+                    <th>Avg. Delta Variance</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="matrixTableBody">
+                </tbody>
+        </table>
+
+        <h3>Analysis & Fault Tracking Notes</h3>
+        <div id="diagnosticNotes"></div>
+    </div>
+
+    <script>
+        document.getElementById('diagnosticForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            analyzeData();
+        });
+
+        function getAvgPairData(p1_prefix, p2_prefix) {
+            let sumC = 0, sumD = 0, sumPctDiff = 0;
+            
+            for(let r = 1; r <= 3; r++) {
+                let valC = parseFloat(document.getElementById(`${p1_prefix}_r${r}_c`).value);
+                let valD = parseFloat(document.getElementById(`${p2_prefix}_r${r}_d`).value);
+                
+                sumC += valC;
+                sumD += valD;
+                
+                // Percent difference tracking relative to the mean of the two readings
+                let mean = (valC + valD) / 2;
+                let pctDiff = mean === 0 ? 0 : (Math.abs(valC - valD) / mean) * 100;
+                sumPctDiff += pctDiff;
+            }
+            
+            return {
+                avgC: sumC / 3,
+                avgD: sumD / 3,
+                avgPctDiff: sumPctDiff / 3
+            };
+        }
+
+        function analyzeData() {
+            const tolerance = parseFloat(document.getElementById('tolerance').value);
+            
+            // 1. Process Raw Pairing Metrics
+            const results = {
+                'c1_d1': getAvgPairData('c1_d1', 'c1_d1'),
+                'c1_d2': getAvgPairData('c1_d2', 'c1_d2'),
+                'c2_d1': getAvgPairData('c2_d1', 'c2_d1'),
+                'c2_d2': getAvgPairData('c2_d2', 'c2_d2')
+            };
+
+            // 2. Classify pairings as Match (true) or Mismatch (false)
+            const matches = {
+                'c1_d1': results['c1_d1'].avgPctDiff <= tolerance,
+                'c1_d2': results['c1_d2'].avgPctDiff <= tolerance,
+                'c2_d1': results['c2_d1'].avgPctDiff <= tolerance,
+                'c2_d2': results['c2_d2'].avgPctDiff <= tolerance
+            };
+
+            // Count successful matches
+            const matchCount = Object.values(matches).filter(Boolean).length;
+            
+            let conclusion = "";
+            let statusBadgeHtml = "";
+            let trackingNotes = "";
+
+            // 3. Logic Matrix Engine
+            if (matchCount === 4) {
+                statusBadgeHtml = '<span class="status-badge status-pass">ALL METERS HEALTHY</span>';
+                conclusion = "All configurations evaluated within specified tolerances. All 4 meters (C1, C2, D1, D2) are highly consistent and functioning accurately.";
+                trackingNotes = "<p>No individual hardware servicing actions required. Cross-calibration complete.</p>";
+            } 
+            else if (matchCount === 2) {
+                // Single Fault Isolation logic
+                statusBadgeHtml = '<span class="status-badge status-fail">SINGLE FAULT DETECTED</span>';
+                
+                if (matches['c1_d1'] && matches['c2_d1'] && !matches['c1_d2'] && !matches['c2_d2']) {
+                    conclusion = "Hardware fault isolated to flow meter: [ D2 ]";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Meter D1 matches seamlessly with both C1 and C2. However, whenever D2 is brought inline, the variance breaches tolerance metrics. Replace or recalibrate D2.</p>";
+                } else if (matches['c1_d2'] && matches['c2_d2'] && !matches['c1_d1'] && !matches['c2_d1']) {
+                    conclusion = "Hardware fault isolated to flow meter: [ D1 ]";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Meter D2 matches seamlessly with both C1 and C2. The system errors manifest entirely when utilizing the D1 run path. Replace or recalibrate D1.</p>";
+                } else if (matches['c1_d1'] && matches['c1_d2'] && !matches['c2_d1'] && !matches['c2_d2']) {
+                    conclusion = "Hardware fault isolated to flow meter: [ C2 ]";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Meter C1 tracked consistently against both downstream targets. Meter C2 shows uniform structural deviation. Replace or recalibrate C2.</p>";
+                } else if (matches['c2_d1'] && matches['c2_d2'] && !matches['c1_d1'] && !matches['c1_d2']) {
+                    conclusion = "Hardware fault isolated to flow meter: [ C1 ]";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Meter C2 has a clean validation footprint across all parameters. Meter C1 generates unallowable deviations across both D legs. Replace or recalibrate C1.</p>";
+                } else {
+                    statusBadgeHtml = '<span class="status-badge status-warn">COMPLEX ANOMALY</span>';
+                    conclusion = "Dual-match configuration profile detected, but doesn't map to standard singular device displacement.";
+                    trackingNotes = "<p>Data suggests possible cross-compensation or fluid loop shifting. Recommend instrument loop baseline flush.</p>";
+                }
+            } 
+            else if (matchCount === 1) {
+                // Dual Fault Isolation logic (one bad C, one bad D)
+                statusBadgeHtml = '<span class="status-badge status-fail">DUAL FAULT DETECTED</span>';
+                
+                if (matches['c1_d1']) {
+                    conclusion = "Multiple hardware faults isolated: [ C2 ] and [ D2 ] are inaccurate.";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Only the C1 + D1 configuration achieved steady-state correlation. This establishes C1 and D1 as your valid operational baseline elements, identifying C2 and D2 as the drifted instrumentation units.</p>";
+                } else if (matches['c1_d2']) {
+                    conclusion = "Multiple hardware faults isolated: [ C2 ] and [ D1 ] are inaccurate.";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Only the C1 + D2 configuration achieved steady-state correlation. This establishes C1 and D2 as your valid operational baseline elements, identifying C2 and D1 as the drifted instrumentation units.</p>";
+                } else if (matches['c2_d1']) {
+                    conclusion = "Multiple hardware faults isolated: [ C1 ] and [ D2 ] are inaccurate.";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Only the C2 + D1 configuration achieved steady-state correlation. This establishes C2 and D1 as your valid operational baseline elements, identifying C1 and D2 as the drifted instrumentation units.</p>";
+                } else if (matches['c2_d2']) {
+                    conclusion = "Multiple hardware faults isolated: [ C1 ] and [ D1 ] are inaccurate.";
+                    trackingNotes = "<p><strong>Root Cause Breakdown:</strong> Only the C2 + D2 configuration achieved steady-state correlation. This establishes C2 and D2 as your valid operational baseline elements, identifying C1 and D1 as the drifted instrumentation units.</p>";
+                }
+            } 
+            else if (matchCount === 0) {
+                // Double Fault in same branch or System-wide variance
+                statusBadgeHtml = '<span class="status-badge status-warn">CRITICAL MISMATCH</span>';
+                conclusion = "Severe Mismatch: 0 out of 4 tests matched tracking profile criteria.";
+                trackingNotes = "<p><strong>Root Cause Analysis:</strong> All physical pairings run counter to the validation tolerance threshold. This typically points to one of two structural realities:</p><ul><li>Both C1 and C2 are bad, or both D1 and D2 are bad.</li><li>Three or more meters have experienced independent drift anomalies.</li></ul><p><em>Action Needed:</em> Introduce an independent reference meter to decouple the standard array.</p>";
+            }
+
+            // 4. Render Table and Report Output Elements
+            document.getElementById('reportTimestamp').innerText = "Generated: " + new Date().toLocaleString();
+            document.getElementById('overallStatusBadge').innerHTML = statusBadgeHtml;
+            document.getElementById('executiveSummary').innerText = conclusion;
+            document.getElementById('diagnosticNotes').innerHTML = trackingNotes;
+
+            const tbody = document.getElementById('matrixTableBody');
+            tbody.innerHTML = ""; // Clear active array data
+
+            const labelMapping = {
+                'c1_d1': 'C1 + D1 Series Loop',
+                'c1_d2': 'C1 + D2 Series Loop',
+                'c2_d1': 'C2 + D1 Series Loop',
+                'c2_d2': 'C2 + D2 Series Loop'
+            };
+
+            for (let key in results) {
+                let row = document.createElement('tr');
+                let passClass = matches[key] ? 'style="color: #2f855a; font-weight:bold;"' : 'class="text-danger"';
+                let statusText = matches[key] ? 'MATCH' : 'MISMATCH';
+                
+                row.innerHTML = `
+                    <td class="text-mono"><strong>${labelMapping[key]}</strong></td>
+                    <td class="text-mono">${results[key].avgC.toFixed(2)}</td>
+                    <td class="text-mono">${results[key].avgD.toFixed(2)}</td>
+                    <td class="text-mono">${results[key].avgPctDiff.toFixed(2)}%</td>
+                    <td ${passClass}>${statusText}</td>
+                `;
+                tbody.appendChild(row);
+            }
+
+            document.getElementById('reportContainer').classList.remove('hidden');
+            window.scrollTo({ top: document.getElementById('reportContainer').offsetTop, behavior: 'smooth' });
+        }
+
+        // Mock Data Generator for validation/testing purposes
+        function loadMockData() {
+            // Scenario: D2 is systematically failing low by ~10% across variables
+            const data = {
+                // Pair 1 (Good/Good)
+                c1_d1_r1_c: 10.1, c1_d1_r1_d: 10.0,
+                c1_d1_r2_c: 50.2, c1_d1_r2_d: 49.9,
+                c1_d1_r3_c: 100.1, c1_d1_r3_d: 99.8,
+                // Pair 2 (Good/Faulty D2)
+                c1_d2_r1_c: 10.0, c1_d2_r1_d: 9.1,
+                c1_d2_r2_c: 50.1, c1_d2_r2_d: 45.2,
+                c1_d2_r3_c: 99.9,  c1_d2_r3_d: 90.1,
+                // Pair 3 (Good/Good)
+                c2_d1_r1_c: 9.9,   c2_d1_r1_d: 10.0,
+                c2_d1_r2_c: 49.8,  c2_d1_r2_d: 50.1,
+                c2_d1_r3_c: 100.3, c2_d1_r3_d: 100.0,
+                // Pair 4 (Good/Faulty D2)
+                c2_d2_r1_c: 10.1, c2_d2_r1_d: 9.0,
+                c2_d2_r2_c: 49.9, c2_d2_r2_d: 44.8,
+                c2_d2_r3_c: 100.2, c2_d2_r3_d: 90.5
+            };
+
+            for (let key in data) {
+                document.getElementById(key).value = data[key];
+            }
+            document.getElementById('tolerance').value = 1.5;
+        }
+    </script>
+</body>
+</html>
+
+
